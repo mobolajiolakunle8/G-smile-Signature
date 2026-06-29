@@ -1,16 +1,14 @@
 /**
- * G-Smile Signature — Transactional Email Service
- *
- * SECURITY: The Resend API key never lives in the browser.
- * All emails are sent through a tiny serverless function
- * that lives at /api/send-email  (see api/send-email.ts).
+ * Transactional Email Service
+ * 
+ * CRITICAL SECURITY FIX: 
+ * Resend API does not support browser-side calls (CORS). 
+ * Directly calling it from the frontend leaks your API Key.
+ * 
+ * PRO FIX: Call a secure backend endpoint (/api/send-email).
  */
 
-export type EmailType =
-  | 'order-confirmation'
-  | 'payment-received'
-  | 'order-shipped'
-  | 'password-reset';
+export type EmailType = 'order-confirmation' | 'payment-received' | 'order-shipped' | 'password-reset';
 
 export interface EmailPayload {
   to: string;
@@ -18,272 +16,123 @@ export interface EmailPayload {
   html: string;
 }
 
-/* ── Brand tokens ──────────────────────────────────────── */
-const GOLD   = '#D4A24A';
-const INK    = '#111111';
-const CREAM  = '#F6F2E8';
-const WHITE  = '#ffffff';
-const GREY   = '#888888';
+const BRAND_COLOR = '#D4A24A'; // Gold
+const TEXT_COLOR = '#111111'; // Ink
+const BG_COLOR = '#F6F2E8';   // Cream
 
-/* ── Base email shell ──────────────────────────────────── */
-function layout(body: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>G-Smile Signature</title>
-</head>
-<body style="margin:0;padding:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:${CREAM};color:${INK};">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};padding:48px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:${WHITE};border-radius:8px;overflow:hidden;">
-
-          <!-- HEADER -->
-          <tr>
-            <td style="padding:28px 40px;text-align:center;border-bottom:3px solid ${GOLD};">
-              <p style="margin:0;font-family:Georgia,serif;font-size:26px;font-weight:bold;color:${INK};">
-                G-Smile <span style="color:${GOLD};">Signature</span>
-              </p>
-              <p style="margin:6px 0 0;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:${GREY};">
-                Premium Luxury Bags
-              </p>
-            </td>
-          </tr>
-
-          <!-- BODY -->
-          <tr>
-            <td style="padding:40px;">
-              ${body}
-            </td>
-          </tr>
-
-          <!-- FOOTER -->
-          <tr>
-            <td style="padding:24px 40px;background:#f9f9f9;text-align:center;border-top:1px solid #eeeeee;">
-              <p style="margin:0;font-size:12px;color:${GREY};">
-                &copy; ${new Date().getFullYear()} G-Smile Signature. All rights reserved.
-              </p>
-              <p style="margin:6px 0 0;font-size:12px;color:${GREY};">
-                Lagos, Nigeria &nbsp;|&nbsp; gsmilebags@gmail.com &nbsp;|&nbsp; +234 806 565 3384
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+function getBaseLayout(content: string): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>G-Smile Signature</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: ${BG_COLOR}; color: ${TEXT_COLOR};">
+      <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: ${BG_COLOR}; padding: 40px 0;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <tr>
+                <td style="padding: 30px 40px; text-align: center; border-bottom: 2px solid ${BRAND_COLOR};">
+                  <h1 style="margin: 0; font-family: 'Georgia', serif; font-size: 24px; color: ${TEXT_COLOR};">G-Smile <span style="color: ${BRAND_COLOR};">Signature</span></h1>
+                  <p style="margin: 5px 0 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888;">Premium Luxury Bags</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  ${content}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 20px 40px; background-color: #fafafa; text-align: center; font-size: 12px; color: #888;">
+                  <p style="margin: 0;">&copy; ${new Date().getFullYear()} G-Smile Signature. All rights reserved.</p>
+                  <p style="margin: 5px 0 0 0;">Lagos, Nigeria | gsmilebags@gmail.com</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
 }
 
-/* ── Gold CTA button ───────────────────────────────────── */
-function btn(href: string, label: string, bg = GOLD, color = INK): string {
-  return `<a href="${href}"
-    style="display:inline-block;margin-top:24px;padding:14px 28px;
-           background:${bg};color:${color};font-size:13px;font-weight:bold;
-           text-decoration:none;border-radius:4px;letter-spacing:1px;">
-    ${label}
-  </a>`;
-}
-
-/* ── Divider ───────────────────────────────────────────── */
-const divider = `<hr style="border:none;border-top:1px solid #eeeeee;margin:28px 0;" />`;
-
-/* ── Email generators ──────────────────────────────────── */
-export function generateEmail(type: EmailType, data: any): EmailPayload {
+export function generateEmail(type: EmailType, data: any): EmailPayload & { customerName?: string } {
   let subject = '';
-  let body    = '';
+  let content = '';
 
   switch (type) {
-
-    /* ── 1. Order Confirmation ── */
-    case 'order-confirmation': {
-      subject = `Your order is confirmed — ${data.orderId}`;
-      body = `
-        <h2 style="margin:0 0 16px;font-size:22px;color:${INK};">
-          Thank you for your order, ${data.customerName}!
-        </h2>
-        <p style="margin:0;font-size:15px;line-height:1.7;color:#444;">
-          We have received your order <strong style="color:${INK};">#${data.orderId}</strong> and are holding it while we await your bank transfer.
-        </p>
-
-        ${divider}
-
-        <!-- Order summary box -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};border-radius:6px;padding:20px;margin:0;">
-          <tr>
-            <td style="font-size:13px;color:#555;padding:6px 0;">Order Number</td>
-            <td align="right" style="font-size:13px;font-weight:bold;color:${INK};padding:6px 0;">#${data.orderId}</td>
-          </tr>
-          <tr>
-            <td style="font-size:13px;color:#555;padding:6px 0;">Total Amount</td>
-            <td align="right" style="font-size:16px;font-weight:bold;color:${GOLD};padding:6px 0;">${data.total}</td>
-          </tr>
-          <tr>
-            <td style="font-size:13px;color:#555;padding:6px 0;">Items</td>
-            <td align="right" style="font-size:13px;color:${INK};padding:6px 0;">${data.itemCount} item(s)</td>
-          </tr>
-          <tr>
-            <td style="font-size:13px;color:#555;padding:6px 0;">Payment</td>
-            <td align="right" style="font-size:13px;color:${INK};padding:6px 0;">Bank Transfer</td>
-          </tr>
-        </table>
-
-        ${divider}
-
-        <p style="font-size:14px;line-height:1.7;color:#555;margin:0;">
-          Please complete your bank transfer using the account details provided at checkout.
-          Once we receive your payment, we will begin processing your order immediately.
-        </p>
-
-        ${btn(data.trackUrl, 'Track Your Order')}
-        ${btn('https://wa.me/2348065653384?text=Hello+G-Smile+Signature,+I+just+placed+order+' + data.orderId, 'Confirm via WhatsApp', INK, WHITE)}
+    case 'order-confirmation':
+      subject = `Order Received: ${data.orderId}`;
+      content = `
+        <h2 style="margin-top: 0; font-size: 22px;">Thank you for your order!</h2>
+        <p style="font-size: 16px; line-height: 1.6;">Hello ${data.customerName},</p>
+        <p style="font-size: 16px; line-height: 1.6;">We have received your order <strong>#${data.orderId}</strong> and are awaiting your bank transfer.</p>
+        <div style="background-color: ${BG_COLOR}; padding: 20px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Order Total:</strong> ${data.total}</p>
+          <p style="margin: 0; font-size: 14px;"><strong>Items:</strong> ${data.itemCount} item(s)</p>
+        </div>
+        <p style="font-size: 16px; line-height: 1.6;">Please complete your transfer to the bank account provided at checkout.</p>
+        <a href="${data.trackUrl}" style="display: inline-block; background-color: ${BRAND_COLOR}; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; margin-top: 10px;">Track Your Order</a>
       `;
       break;
-    }
 
-    /* ── 2. Payment Received ── */
-    case 'payment-received': {
-      subject = `Payment received — Order #${data.orderId} is being prepared`;
-      body = `
-        <h2 style="margin:0 0 16px;font-size:22px;color:${INK};">
-          Payment Confirmed! 🎉
-        </h2>
-        <p style="margin:0;font-size:15px;line-height:1.7;color:#444;">
-          Hello <strong>${data.customerName}</strong>, your payment for order
-          <strong style="color:${INK};">#${data.orderId}</strong> has been confirmed.
-        </p>
-
-        ${divider}
-
-        <p style="margin:0;font-size:14px;line-height:1.7;color:#555;">
-          Our team is now carefully preparing your luxury bag for shipment.
-          You will receive another email with your tracking details as soon
-          as your order leaves our facility.
-        </p>
-
-        <p style="margin:20px 0 0;font-size:14px;line-height:1.7;color:#555;">
-          We appreciate your trust in G-Smile Signature and cannot wait
-          for you to receive your piece.
-        </p>
-
-        ${btn(data.trackUrl, 'View Order Status')}
+    case 'payment-received':
+      subject = `Payment Confirmed: ${data.orderId}`;
+      content = `
+        <h2 style="margin-top: 0; font-size: 22px;">Payment Confirmed!</h2>
+        <p style="font-size: 16px; line-height: 1.6;">Hello ${data.customerName},</p>
+        <p style="font-size: 16px; line-height: 1.6;">We have received your payment for order <strong>#${data.orderId}</strong>.</p>
+        <p style="font-size: 16px; line-height: 1.6;">Our team is now preparing your items. You will receive an update once they are shipped.</p>
+        <a href="${data.trackUrl}" style="display: inline-block; background-color: ${TEXT_COLOR}; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; margin-top: 10px;">View Order</a>
       `;
       break;
-    }
 
-    /* ── 3. Order Shipped ── */
-    case 'order-shipped': {
-      subject = `Your order is on its way — #${data.orderId}`;
-      body = `
-        <h2 style="margin:0 0 16px;font-size:22px;color:${INK};">
-          Your order has shipped! 🚀
-        </h2>
-        <p style="margin:0;font-size:15px;line-height:1.7;color:#444;">
-          Hello <strong>${data.customerName}</strong>,
-          your G-Smile Signature bag is on its way to you!
-        </p>
-
-        ${divider}
-
-        <!-- Tracking box -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};border-radius:6px;padding:20px;margin:0;">
-          <tr>
-            <td style="font-size:13px;color:#555;padding:6px 0;">Order Number</td>
-            <td align="right" style="font-size:13px;font-weight:bold;color:${INK};padding:6px 0;">#${data.orderId}</td>
-          </tr>
-          <tr>
-            <td style="font-size:13px;color:#555;padding:6px 0;">Tracking Number</td>
-            <td align="right" style="font-size:13px;font-weight:bold;color:${GOLD};padding:6px 0;">
-              ${data.trackingNumber || 'To be updated'}
-            </td>
-          </tr>
-          <tr>
-            <td style="font-size:13px;color:#555;padding:6px 0;">Estimated Delivery</td>
-            <td align="right" style="font-size:13px;color:${INK};padding:6px 0;">2–5 business days</td>
-          </tr>
-        </table>
-
-        ${divider}
-
-        <p style="margin:0;font-size:14px;line-height:1.7;color:#555;">
-          Please note that delivery times may vary based on your location.
-          If you have any questions, don't hesitate to reach out via WhatsApp.
-        </p>
-
-        ${btn(data.trackUrl, 'Track My Delivery', GOLD, INK)}
-        ${btn('https://wa.me/2348065653384', 'Contact Support', INK, WHITE)}
+    case 'order-shipped':
+      subject = `Your Order Has Shipped: ${data.orderId}`;
+      content = `
+        <h2 style="margin-top: 0; font-size: 22px;">Order Shipped! 🚀</h2>
+        <p style="font-size: 16px; line-height: 1.6;">Hello ${data.customerName},</p>
+        <p style="font-size: 16px; line-height: 1.6;">Your order <strong>#${data.orderId}</strong> has been shipped and is on its way.</p>
+        <div style="background-color: ${BG_COLOR}; padding: 20px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px;"><strong>Tracking Number:</strong> ${data.trackingNumber || 'N/A'}</p>
+        </div>
+        <a href="${data.trackUrl}" style="display: inline-block; background-color: ${BRAND_COLOR}; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; margin-top: 10px;">Track Shipment</a>
       `;
       break;
-    }
 
-    /* ── 4. Password Reset ── */
-    case 'password-reset': {
-      subject = 'Reset your G-Smile Signature password';
-      body = `
-        <h2 style="margin:0 0 16px;font-size:22px;color:${INK};">
-          Password Reset Request
-        </h2>
-        <p style="margin:0;font-size:15px;line-height:1.7;color:#444;">
-          We received a request to reset your G-Smile Signature account password.
-          Click the button below to set a new password.
-        </p>
-        <p style="margin:12px 0 0;font-size:13px;color:#888;">
-          This link expires in <strong>1 hour</strong>. If you did not make
-          this request, you can safely ignore this email.
-        </p>
-
-        ${btn(data.resetUrl, 'Reset My Password', INK, WHITE)}
-
-        ${divider}
-
-        <p style="margin:0;font-size:12px;color:#aaa;">
-          For security, never share this link with anyone.
-          G-Smile Signature will never ask for your password.
-        </p>
+    case 'password-reset':
+      subject = 'Reset Your Password';
+      content = `
+        <h2 style="margin-top: 0; font-size: 22px;">Password Reset</h2>
+        <p style="font-size: 16px; line-height: 1.6;">Hello,</p>
+        <p style="font-size: 16px; line-height: 1.6;">Click the button below to reset your password.</p>
+        <a href="${data.resetUrl}" style="display: inline-block; background-color: ${TEXT_COLOR}; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; margin-top: 10px;">Reset Password</a>
       `;
       break;
-    }
   }
 
   return {
     to: data.email,
     subject,
-    html: layout(body),
+    html: getBaseLayout(content),
+    customerName: data.customerName,
   };
 }
 
 /**
- * sendTransactionalEmail
- *
- * Calls the secure serverless endpoint /api/send-email
- * which holds the Resend API key server-side.
- * The key is NEVER exposed to the browser.
+ * Sends an email via your backend secure endpoint.
  */
-export async function sendTransactionalEmail(payload: EmailPayload): Promise<void> {
-  if (!payload.to) {
-    console.warn('sendTransactionalEmail: No recipient email address provided. Skipping.');
-    return;
-  }
+import { dispatchEmail } from '../utils/secureEmail';
 
-  try {
-    const res = await fetch('/api/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Unknown error' }));
-      console.error('Email send failed:', err);
-      return;
-    }
-
-    console.log('Email sent successfully to', payload.to);
-  } catch (err) {
-    console.error('Network error sending email:', err);
-  }
+/**
+ * Sends a transactional email securely.
+ */
+export async function sendTransactionalEmail(payload: EmailPayload) {
+  // Fixes the key leak issue by strictly defining the payload schema
+  // and handling the Authorization header safely in the utility.
+  await dispatchEmail(payload);
 }
