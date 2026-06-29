@@ -194,7 +194,7 @@ export function Home({ onQuickView }: { onQuickView: (p: EditableProduct) => voi
               className="group flex w-[170px] flex-shrink-0 flex-col items-center gap-2 rounded-lg border border-cream bg-white p-4 text-center transition-all hover:-translate-y-1 hover:border-gold hover:shadow-lg sm:w-[180px]"
             >
               <div className="h-20 w-20 overflow-hidden rounded-full bg-cream">
-                <img src={c.image} alt={c.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                <img src={c.image} alt={c.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
               </div>
               <p className="mt-1 font-display text-[15px] font-medium leading-tight text-ink">{c.name}</p>
               <p className="text-[10px] uppercase tracking-wider text-ash">{c.blurb}</p>

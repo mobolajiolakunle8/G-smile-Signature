@@ -14,7 +14,6 @@ import {
   defaultCoupons,
   defaultContent,
   defaultSettings,
-  formatNaira,
   type EditableProduct,
   type EditableCategory,
   type EditableTestimonial,
@@ -418,20 +417,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: order.status,
       ...clientInfo(),
     }).catch(() => undefined);
-    
-    // Trigger Order Confirmation Email
-    if (order.customerEmail) {
-      const emailPayload = generateEmail('order-confirmation', {
-        email: order.customerEmail,
-        customerName: order.customerName,
-        orderId: order.id,
-        total: formatNaira(order.total),
-        itemCount: order.items.reduce((sum, item) => sum + item.qty, 0),
-        trackUrl: `${window.location.origin}/track?order=${order.id}`,
-      });
-      sendTransactionalEmail(emailPayload);
-    }
-
     setCart([]);
     toast("Order placed! Please complete your bank transfer.");
     return order;

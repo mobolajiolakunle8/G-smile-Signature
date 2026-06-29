@@ -516,7 +516,7 @@ function ProductEditor({ product, onClose }: { product: EditableProduct; onClose
     if (!files.length) return;
     setUploading(true);
     const { compressImage } = await import("../utils/imageCompression");
-    const compressed = await Promise.all(files.map((f) => compressImage(f, 1000, 0.65)));
+    const compressed = await Promise.all(files.map((f) => compressImage(f, 1200, 0.75)));
     const next = [...gallery, ...compressed];
     setP((x) => ({ ...x, gallery: next, image: next[0] }));
     setUploading(false);

@@ -3,32 +3,57 @@ import { fileURLToPath } from "url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import compression from "vite-plugin-compression";
+import { viteSingleFile } from "vite-plugin-singlefile";
+import compression from "vite-plugin-compression2";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    compression({
-      algorithm: 'gzip',
-      ext: '.gz',
-    }),
-    compression({
-      algorithm: 'brotliCompress',
-      ext: '.br',
-    }),
+
+    /* Inline JS + CSS into a single index.html.
+       Images from public/ are copied to dist/ by Vite automatically,
+       so they resolve correctly on every hosting platform. */
+    viteSingleFile({ removeViteModuleLoader: true }),
+
+    /* Gzip + Brotli — drastically reduces transfer size */
+    compression({ algorithms: ["gzip"],           filename: "[path][base].gz"  }),
+    compression({ algorithms: ["brotliCompress"],  filename: "[path][base].br"  }),
   ],
+
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
+    alias: { "@": path.resolve(__dirname, "src") },
+  },
+
+  build: {
+    /* Inline imported assets under 2 MB as base64 data URIs.
+       Larger files are copied to dist/assets/ as normal. */
+    assetsInlineLimit: 2 * 1024 * 1024, // 2 MB
+
+    /* Single CSS chunk */
+    cssCodeSplit: false,
+
+    /* Target modern browsers — smaller, faster output */
+    target: "es2020",
+
+    /* Minify aggressively */
+    minify: "esbuild",
+
+    rollupOptions: {
+      output: {
+        /* Merge all dynamic imports into the entry chunk so
+           viteSingleFile can inline everything. */
+        inlineDynamicImports: true,
+
+        /* Compact variable names */
+        compact: true,
+      },
     },
   },
-  build: {
-    reportCompressedSize: true,
-    chunkSizeWarningLimit: 1000,
-  },
+
+  /* Serve public/ at / in dev */
+  publicDir: "public",
 });

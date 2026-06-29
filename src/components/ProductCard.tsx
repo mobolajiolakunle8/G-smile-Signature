@@ -22,13 +22,12 @@ export function ProductCard({ product, onQuickView }: { product: EditableProduct
         className="relative aspect-[3/4] cursor-pointer overflow-hidden bg-cream"
         onClick={() => navigate(`/product/${product.id}`)}
       >
-          <img
-            src={product.image}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-          />
+        <img
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+        />
         {/* badges */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {product.badge && (
