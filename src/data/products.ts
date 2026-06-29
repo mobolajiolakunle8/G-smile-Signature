@@ -21,14 +21,17 @@ export type Product = {
   specs: Record<string, string>;
 };
 
+/* Images are served from the /public folder.
+   assetsInlineLimit in vite.config.ts inlines them at build time
+   so they work on every deployment platform. */
 const IMG = {
-  handbags: "/images/category-handbags.jpg",
-  tote: "/images/category-tote.jpg",
-  travel: "/images/category-travel.jpg",
-  laptop: "/images/category-laptop.jpg",
+  handbags:  "/images/category-handbags.jpg",
+  tote:      "/images/category-tote.jpg",
+  travel:    "/images/category-travel.jpg",
+  laptop:    "/images/category-laptop.jpg",
   corporate: "/images/category-corporate.jpg",
-  luxury: "/images/category-luxury.jpg",
-  p1: "/images/product-1.jpg",
+  luxury:    "/images/category-luxury.jpg",
+  p1:        "/images/product-1.jpg",
   lifestyle: "/images/lifestyle1.jpg",
 };
 
