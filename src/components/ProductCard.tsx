@@ -6,6 +6,7 @@ import { navigate } from "../store/useRouter";
 import { Icon } from "./Icons";
 import { Stars } from "./ui";
 import { cn } from "../utils/cn";
+import { imageSrcSet, optimizeImageUrl } from "../services/imageCdn";
 
 export function ProductCard({ product, onQuickView }: { product: EditableProduct; onQuickView?: (p: EditableProduct) => void }) {
   const { addToCart, toggleWishlist, inWishlist } = useStore();
@@ -22,12 +23,15 @@ export function ProductCard({ product, onQuickView }: { product: EditableProduct
         className="relative aspect-[3/4] cursor-pointer overflow-hidden bg-cream"
         onClick={() => navigate(`/product/${product.id}`)}
       >
-        <img
-          src={product.image}
-          alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-        />
+          <img
+          src={optimizeImageUrl(product.image, { width: 520 })}
+          srcSet={imageSrcSet(product.image, [320, 420, 520, 720])}
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          />
         {/* badges */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {product.badge && (

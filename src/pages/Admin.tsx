@@ -9,6 +9,7 @@ import { setValue, SYNC_PATHS } from "../firebase/sync";
 import { firebaseEnabled } from "../firebase/config";
 import { cn } from "../utils/cn";
 import { useAdminTheme } from "../components/AdminTheme";
+import { cloudinaryEnabled, optimizeImageUrl, uploadImageToCloudinary } from "../services/imageCdn";
 
 /* ─── Types ────────────────────────────────────────────── */
 type Section =
@@ -515,9 +516,8 @@ function ProductEditor({ product, onClose }: { product: EditableProduct; onClose
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploading(true);
-    const { compressImage } = await import("../utils/imageCompression");
-    const compressed = await Promise.all(files.map((f) => compressImage(f, 1200, 0.75)));
-    const next = [...gallery, ...compressed];
+    const uploaded = await Promise.all(files.map((file) => uploadImageToCloudinary(file, { maxWidth: 1400, quality: 0.72, folder: "g-smile-signature/products" })));
+    const next = [...gallery, ...uploaded];
     setP((x) => ({ ...x, gallery: next, image: next[0] }));
     setUploading(false);
   };
@@ -663,7 +663,7 @@ function ProductEditor({ product, onClose }: { product: EditableProduct; onClose
               <label className="cursor-pointer">
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleImages} />
                 <span className="inline-flex items-center gap-2 border border-cream bg-cream/60 px-4 py-2 text-sm font-semibold text-ink hover:border-gold hover:text-gold dark:border-white/10 dark:bg-white/5 dark:text-white">
-                  <Icon.plus className="h-4 w-4" /> {uploading ? "Compressing…" : "Upload Images"}
+                  <Icon.plus className="h-4 w-4" /> {uploading ? (cloudinaryEnabled ? "Uploading to CDN…" : "Compressing…") : "Upload Images"}
                 </span>
               </label>
             </div>
@@ -793,6 +793,16 @@ function ProductEditor({ product, onClose }: { product: EditableProduct; onClose
 function CategoriesMgr() {
   const { categories, products, upsertCategory, deleteCategory, toast } = useStore();
   const [edit, setEdit] = useState<EditableCategory | null>(null);
+  const [categoryUploading, setCategoryUploading] = useState(false);
+
+  const handleCategoryImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !edit) return;
+    setCategoryUploading(true);
+    const uploaded = await uploadImageToCloudinary(file, { maxWidth: 1000, quality: 0.72, folder: "g-smile-signature/categories" });
+    setEdit({ ...edit, image: uploaded });
+    setCategoryUploading(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -807,7 +817,7 @@ function CategoriesMgr() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((c) => (
           <Card key={c.slug}>
-            <img src={c.image} alt="" className="h-32 w-full rounded object-cover" />
+            <img src={optimizeImageUrl(c.image, { width: 600 })} alt="" loading="lazy" decoding="async" className="h-32 w-full rounded object-cover" />
             <p className="mt-3 font-display text-lg font-semibold text-ink dark:text-white">{c.name}</p>
             <p className="text-xs text-ash">{c.blurb}</p>
             <p className="mt-1 text-[11px] text-ash">{products.filter((p) => p.category === c.slug).length} products</p>
@@ -831,6 +841,15 @@ function CategoriesMgr() {
               <Input label="Slug" value={edit.slug} onChange={(v) => setEdit({ ...edit, slug: v })} />
               <Input label="Blurb" value={edit.blurb} onChange={(v) => setEdit({ ...edit, blurb: v })} />
               <Input label="Image URL" value={edit.image} onChange={(v) => setEdit({ ...edit, image: v })} />
+              <div>
+                <label className="cursor-pointer">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleCategoryImage} />
+                  <span className="inline-flex items-center gap-2 border border-cream bg-cream/60 px-4 py-2 text-sm font-semibold text-ink hover:border-gold hover:text-gold dark:border-white/10 dark:bg-white/5 dark:text-white">
+                    <Icon.plus className="h-4 w-4" /> {categoryUploading ? (cloudinaryEnabled ? "Uploading to CDN…" : "Compressing…") : "Upload Category Image"}
+                  </span>
+                </label>
+                {edit.image && <img src={optimizeImageUrl(edit.image, { width: 300 })} alt="Category preview" className="mt-3 h-24 w-full rounded object-cover" />}
+              </div>
             </div>
             <div className="flex justify-end gap-3 border-t border-cream px-6 py-4 dark:border-white/10">
               <Button variant="outline" size="sm" onClick={() => setEdit(null)}>Cancel</Button>
@@ -1651,9 +1670,8 @@ function Settings() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { compressImage } = await import("../utils/imageCompression");
-    const compressed = await compressImage(file, 400, 0.85);
-    setLogoPreview(compressed);
+    const uploaded = await uploadImageToCloudinary(file, { maxWidth: 500, quality: 0.82, folder: "g-smile-signature/branding" });
+    setLogoPreview(uploaded);
     setUploading(false);
   };
 
@@ -1696,14 +1714,30 @@ function Settings() {
           <label className="cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={handleLogo} />
             <span className="inline-flex items-center gap-2 border border-cream px-4 py-2 text-sm font-semibold text-ink hover:border-gold hover:text-gold dark:border-white/10 dark:text-white">
-              {uploading ? "Compressing…" : "Upload Logo"}
+              {uploading ? (cloudinaryEnabled ? "Uploading to CDN…" : "Compressing…") : "Upload Logo"}
             </span>
           </label>
           {logoPreview && (
             <button onClick={() => setLogoPreview("")} className="text-xs font-semibold text-red-500 hover:underline">Remove</button>
           )}
         </div>
-        <p className="mt-2 text-xs text-ash">PNG with transparent background recommended. Auto-compressed on upload.</p>
+        <p className="mt-2 text-xs text-ash">PNG with transparent background recommended. {cloudinaryEnabled ? "Uploaded to Cloudinary CDN automatically." : "Auto-compressed locally until Cloudinary is configured."}</p>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-ink dark:text-white">Image CDN</p>
+            <p className="mt-1 text-xs text-ash">
+              {cloudinaryEnabled
+                ? "Cloudinary is active. New admin uploads will be delivered through optimized CDN URLs."
+                : "Cloudinary is not configured. Uploads will still be compressed locally, but CDN delivery is disabled."}
+            </p>
+          </div>
+          <span className={cn("rounded px-3 py-1 text-[10px] font-semibold uppercase tracking-widest", cloudinaryEnabled ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>
+            {cloudinaryEnabled ? "Active" : "Local fallback"}
+          </span>
+        </div>
       </Card>
 
       {/* Timing */}

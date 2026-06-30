@@ -39,5 +39,6 @@ export const SYNC_PATHS = {
   content: "content",
   settings: "settings",
   orders: "orders",
+  subscribers: "subscribers",
   logs: "logs",
 } as const;

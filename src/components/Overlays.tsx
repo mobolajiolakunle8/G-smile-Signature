@@ -4,6 +4,7 @@ import { formatNaira, type Product } from "../data/products";
 import { Icon } from "./Icons";
 import { Button, Stars } from "./ui";
 import { CONTACT } from "../data/content";
+import { imageSrcSet, optimizeImageUrl } from "../services/imageCdn";
 
 /* ---------------- Quick View Modal ---------------- */
 export function QuickView({ product, onClose }: { product: Product | null; onClose: () => void }) {
@@ -15,7 +16,15 @@ export function QuickView({ product, onClose }: { product: Product | null; onClo
       <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
       <div className="animate-scale-in relative grid w-full max-w-3xl gap-0 bg-white shadow-2xl sm:grid-cols-2">
         <button onClick={onClose} className="absolute right-4 top-4 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink hover:bg-gold"><Icon.close className="h-4 w-4" /></button>
-        <img src={product.image} alt={product.name} className="h-64 w-full object-cover sm:h-full" />
+        <img
+          src={optimizeImageUrl(product.image, { width: 720 })}
+          srcSet={imageSrcSet(product.image, [360, 520, 720])}
+          sizes="(min-width: 640px) 50vw, 100vw"
+          alt={product.name}
+          loading="lazy"
+          decoding="async"
+          className="h-64 w-full object-cover sm:h-full"
+        />
         <div className="p-6 sm:p-8">
           <Stars rating={product.rating} />
           <h3 className="mt-2 font-display text-2xl font-semibold">{product.name}</h3>

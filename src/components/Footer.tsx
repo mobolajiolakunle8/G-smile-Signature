@@ -7,7 +7,7 @@ import { useStore } from "../store/StoreContext";
 
 
 export function Footer() {
-  const { toast, settings } = useStore();
+  const { settings, subscribeNewsletter } = useStore();
   const [email, setEmail] = useState("");
 
   return (
@@ -27,7 +27,7 @@ export function Footer() {
             onSubmit={(e) => {
               e.preventDefault();
               if (email) {
-                toast("You're subscribed! Welcome to the circle.");
+                subscribeNewsletter(email);
                 setEmail("");
               }
             }}

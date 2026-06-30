@@ -9,6 +9,7 @@ import { Button, Stars } from "../components/ui";
 import { ProductCard } from "../components/ProductCard";
 import { Icon } from "../components/Icons";
 import { cn } from "../utils/cn";
+import { imageSrcSet, optimizeImageUrl } from "../services/imageCdn";
 
 export function ProductDetail({ onQuickView }: { onQuickView: (p: EditableProduct) => void }) {
   const { products, addToCart, toggleWishlist, inWishlist } = useStore();
@@ -57,12 +58,19 @@ export function ProductDetail({ onQuickView }: { onQuickView: (p: EditableProduc
         <div className="mt-8 grid gap-10 lg:grid-cols-2">
           <div>
             <div className="relative aspect-square overflow-hidden bg-cream" onMouseMove={handleMouse} onMouseLeave={() => setZoom((z) => ({ ...z, active: false }))}>
-              <img src={gallery[activeImg]} alt={product.name} className="h-full w-full object-cover transition-transform duration-200" style={zoom.active ? { transform: "scale(1.8)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined} />
+              <img
+                src={optimizeImageUrl(gallery[activeImg], { width: 1000 })}
+                srcSet={imageSrcSet(gallery[activeImg], [480, 768, 1000, 1400])}
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                alt={product.name}
+                className="h-full w-full object-cover transition-transform duration-200"
+                style={zoom.active ? { transform: "scale(1.8)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
+              />
             </div>
             <div className="mt-4 flex gap-3">
               {gallery.map((g, i) => (
                 <button key={i} onClick={() => setActiveImg(i)} className={cn("h-20 w-20 overflow-hidden border-2 transition-colors", activeImg === i ? "border-gold" : "border-transparent")}>
-                  <img src={g} alt="" className="h-full w-full object-cover" />
+                  <img src={optimizeImageUrl(g, { width: 160 })} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>

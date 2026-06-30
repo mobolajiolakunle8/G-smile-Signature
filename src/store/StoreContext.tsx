@@ -14,6 +14,7 @@ import {
   defaultCoupons,
   defaultContent,
   defaultSettings,
+  formatNaira,
   type EditableProduct,
   type EditableCategory,
   type EditableTestimonial,
@@ -96,6 +97,7 @@ type StoreState = {
   content: ContentData;
   settings: AppSettings;
   customers: Customer[];
+  subscribers: { email: string; date: string }[];
   cart: CartItem[];
   wishlist: EditableProduct[];
   user: User | null;
@@ -137,6 +139,7 @@ type StoreState = {
   updateContent: (c: Partial<ContentData>) => void;
   updateSettings: (s: Partial<AppSettings>) => void;
   updatePaymentAccounts: (accounts: PaymentAccount[]) => void;
+  subscribeNewsletter: (email: string) => void;
   toast: (message: string) => void;
 };
 
@@ -246,6 +249,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState<ContentData>(() => load("gs_content", defaultContent));
   const [settings, setSettings] = useState<AppSettings>(() => load("gs_settings", defaultSettings));
   const [orders, setOrders] = useState<Order[]>(() => load("gs_orders", seedOrders));
+  const [subscribers, setSubscribers] = useState<{ email: string; date: string }[]>(() => load("gs_subscribers", []));
   const [isOnline, setIsOnline] = useState(firebaseEnabled && navigator.onLine);
 
   // local-only data
@@ -282,6 +286,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }),
       subscribe<Order[]>(SYNC_PATHS.orders, (data) => {
         if (data) { setOrders(data); save("gs_orders", data); }
+      }),
+      subscribe<{ email: string; date: string }[]>(SYNC_PATHS.subscribers, (data) => {
+        if (data) { setSubscribers(data); save("gs_subscribers", data); }
       }),
     ];
 
@@ -417,6 +424,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: order.status,
       ...clientInfo(),
     }).catch(() => undefined);
+    
+    // Trigger Order Confirmation Email
+    if (order.customerEmail) {
+      const emailPayload = generateEmail('order-confirmation', {
+        email: order.customerEmail,
+        customerName: order.customerName,
+        orderId: order.id,
+        total: formatNaira(order.total),
+        itemCount: order.items.reduce((sum, item) => sum + item.qty, 0),
+        trackUrl: `${window.location.origin}/track?order=${order.id}`,
+      });
+      sendTransactionalEmail(emailPayload);
+    }
+
     setCart([]);
     toast("Order placed! Please complete your bank transfer.");
     return order;
@@ -625,6 +646,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     toast("Payment accounts updated");
   }, [settings, syncUpdate, toast]);
 
+  const subscribeNewsletter = useCallback((email: string) => {
+    setSubscribers((subs) => {
+      if (subs.find((s) => s.email === email)) return subs;
+      const next = [{ email, date: new Date().toISOString() }, ...subs];
+      syncUpdate(SYNC_PATHS.subscribers, setSubscribers, "gs_subscribers", next);
+      return next;
+    });
+    toast("You're subscribed! Welcome to the circle.");
+  }, [syncUpdate, toast]);
+
   // persist local-only data
   useEffect(() => save("gs_cart", cart), [cart]);
   useEffect(() => save("gs_wishlist", wishlist), [wishlist]);
@@ -640,7 +671,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   return (
     <StoreContext.Provider
       value={{
-        products, categories, testimonials, faqs, coupons, content, settings, customers,
+        products, categories, testimonials, faqs, coupons, content, settings, customers, subscribers,
         cart, wishlist, user, orders, toasts, isOnline,
         addToCart, removeFromCart, updateQty, clearCart,
         cartCount, cartSubtotal, toggleWishlist, inWishlist,
@@ -656,6 +687,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         updateContent,
         updateSettings,
         updatePaymentAccounts,
+        subscribeNewsletter,
         toast,
       }}
     >

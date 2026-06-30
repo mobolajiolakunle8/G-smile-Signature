@@ -7,6 +7,8 @@ import { Icon } from "../components/Icons";
 import { CONTACT } from "../data/content";
 import { cn } from "../utils/cn";
 import { generateEmail, sendTransactionalEmail } from "../services/emailService";
+import { compressImage } from "../utils/imageCompression";
+import type { Coupon } from "../store/data";
 
 export function Checkout() {
   const { cart, cartSubtotal, user, placeOrder, toast, settings, uploadPaymentProof } = useStore();
@@ -19,16 +21,42 @@ export function Checkout() {
     state: "Lagos",
     postal: "",
   });
+  const { coupons } = useStore();
   const [selectedAccount, setSelectedAccount] = useState(settings.paymentAccounts[0]?.id || "");
-  const [coupon, setCoupon] = useState("");
-  const [applied, setApplied] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(null);
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState<Order | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
 
   const shipping = cartSubtotal > 150000 ? 0 : form.state === "Lagos" ? 2500 : 5000;
-  const discount = applied ? Math.round(cartSubtotal * 0.1) : 0;
+  
+  const discount = activeCoupon 
+    ? (activeCoupon.discountType === "percent" 
+        ? Math.round(cartSubtotal * (activeCoupon.discountValue / 100))
+        : activeCoupon.discountValue)
+    : 0;
+    
   const total = cartSubtotal - discount + shipping;
+
+  const handleApplyCoupon = () => {
+    if (!couponCode) return;
+    const found = coupons.find(c => c.code === couponCode.toUpperCase() && c.active);
+    if (!found) {
+      setActiveCoupon(null);
+      return toast("Invalid or expired coupon");
+    }
+    if (found.minOrder && cartSubtotal < found.minOrder) {
+      setActiveCoupon(null);
+      return toast(`Minimum order for this coupon is ${formatNaira(found.minOrder)}`);
+    }
+    if (found.maxUses && found.uses >= found.maxUses) {
+      setActiveCoupon(null);
+      return toast("This coupon has reached its usage limit");
+    }
+    setActiveCoupon(found);
+    toast(`Coupon ${found.code} applied successfully!`);
+  };
 
   const set = (k: string) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -54,7 +82,6 @@ export function Checkout() {
     if (!file) return;
     setProofUploading(true);
     try {
-      const { compressImage } = await import("../utils/imageCompression");
       const compressed = await compressImage(file, 1200, 0.7);
       uploadPaymentProof(orderId, compressed);
     } catch {
@@ -321,10 +348,10 @@ export function Checkout() {
             ))}
           </div>
           <div className="mt-5 flex">
-            <input value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="Coupon (SMILE10)" className="w-full border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-gold" />
-            <button type="button" onClick={() => setApplied(coupon.toUpperCase() === "SMILE10")} className="bg-ink px-4 text-xs font-semibold uppercase tracking-wider text-white hover:bg-gold hover:text-ink">Apply</button>
+            <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Enter coupon code" className="w-full border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-gold" />
+            <button type="button" onClick={handleApplyCoupon} className="bg-ink px-4 text-xs font-semibold uppercase tracking-wider text-white hover:bg-gold hover:text-ink">Apply</button>
           </div>
-          {applied && <p className="mt-1 text-xs text-green-700">✓ Coupon applied — 10% off!</p>}
+          {activeCoupon && <p className="mt-1 text-xs text-green-700">✓ Coupon applied — {activeCoupon.discountType === "percent" ? `${activeCoupon.discountValue}%` : formatNaira(activeCoupon.discountValue)} off!</p>}
           <div className="mt-5 space-y-2 border-t border-ink/10 pt-4 text-sm">
             <div className="flex justify-between"><span className="text-ink/60">Subtotal</span><span>{formatNaira(cartSubtotal)}</span></div>
             {discount > 0 && <div className="flex justify-between text-green-700"><span>Discount</span><span>−{formatNaira(discount)}</span></div>}

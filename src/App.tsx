@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { StoreProvider } from "./store/StoreContext";
+import { StoreProvider, useStore } from "./store/StoreContext";
 import { useRouter } from "./store/useRouter";
 import type { Product } from "./data/products";
 import { Header } from "./components/Header";
@@ -31,6 +31,8 @@ function Shell() {
   const isAdmin = path.startsWith("/admin");
   const isAuth = path === "/login" || path === "/register" || path === "/forgot";
 
+  const { products } = useStore();
+
   useEffect(() => {
     logEvent(`${SYNC_PATHS.logs}/visits`, {
       path: route.path,
@@ -39,7 +41,24 @@ function Shell() {
       referrer: document.referrer || "direct",
       userAgent: navigator.userAgent,
     }).catch(() => undefined);
-  }, [route.path, route.query]);
+
+    // Dynamic SEO Titles
+    let title = "G-Smile Signature | Premium Luxury Bags";
+    if (route.path === "/shop") title = "Shop All | G-Smile Signature";
+    else if (route.path.startsWith("/product/")) {
+      const p = products.find((p: any) => p.id === route.path.split("/product/")[1]);
+      if (p) title = `${p.name} | G-Smile Signature`;
+    }
+    else if (route.path === "/cart") title = "Shopping Cart | G-Smile Signature";
+    else if (route.path === "/checkout") title = "Checkout | G-Smile Signature";
+    else if (route.path === "/about") title = "Our Story | G-Smile Signature";
+    else if (route.path === "/contact") title = "Contact Us | G-Smile Signature";
+    else if (route.path === "/faq") title = "Help & FAQ | G-Smile Signature";
+    else if (route.path === "/wishlist") title = "My Wishlist | G-Smile Signature";
+    else if (route.path === "/dashboard") title = "My Account | G-Smile Signature";
+    
+    document.title = title;
+  }, [route.path, route.query, products]);
 
   let page;
   if (path === "/") page = <Home onQuickView={setQuickView} />;

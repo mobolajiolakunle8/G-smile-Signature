@@ -148,7 +148,7 @@ export const defaultContent: ContentData = {
   galleryImages: [...seedGallery],
 };
 export const defaultSettings: AppSettings = {
-  logo: "/images/hero.jpg",
+  logo: "./images/hero.jpg",
   headlineAds: [
     "Free nationwide delivery on orders over ₦150,000",
     "New luxury collection now available",
