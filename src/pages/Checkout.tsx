@@ -118,6 +118,21 @@ export function Checkout() {
       });
       sendTransactionalEmail(emailPayload);
       
+      // GA4 Conversion Tracking (Purchase Event)
+      if ((window as any).gtag) {
+        (window as any).gtag("event", "purchase", {
+          transaction_id: order.id,
+          value: order.total / 100, // GA4 expects value in major currency unit usually, but keeping raw for Naira context
+          currency: "NGN",
+          items: order.items.map((item) => ({
+            item_id: item.name,
+            item_name: item.name,
+            price: item.price,
+            quantity: item.qty,
+          })),
+        });
+      }
+      
       setProcessing(false);
       setDone(order);
     }, 1200);

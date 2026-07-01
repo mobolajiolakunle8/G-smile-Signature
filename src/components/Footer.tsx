@@ -101,6 +101,23 @@ export function Footer() {
         </div>
 
         <div>
+          <h5 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white">Legal</h5>
+          <ul className="space-y-2.5 text-sm">
+            {[
+              ["Privacy Policy", "/privacy-policy"],
+              ["Terms of Service", "/terms-of-service"],
+              ["Return & Refund Policy", "/returns"],
+            ].map(([l, p]) => (
+              <li key={p}>
+                <button onClick={() => navigate(p)} className="transition-colors hover:text-gold">
+                  {l}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
           <h5 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white">Categories</h5>
           <ul className="space-y-2.5 text-sm">
             {categories.map((c) => (

@@ -21,6 +21,8 @@ import { Admin } from "./pages/Admin";
 import { AdminLogin } from "./pages/AdminLogin";
 import { AdminThemeProvider } from "./components/AdminTheme";
 import { SiteThemeProvider } from "./components/SiteTheme";
+import { CookieConsent } from "./components/CookieConsent";
+import { Legal } from "./pages/Legal";
 import { logEvent, SYNC_PATHS } from "./firebase/sync";
 
 function Shell() {
@@ -42,22 +44,59 @@ function Shell() {
       userAgent: navigator.userAgent,
     }).catch(() => undefined);
 
-    // Dynamic SEO Titles
+    // Dynamic SEO Titles & Open Graph Meta Tags
     let title = "G-Smile Signature | Premium Luxury Bags";
-    if (route.path === "/shop") title = "Shop All | G-Smile Signature";
-    else if (route.path.startsWith("/product/")) {
+    let ogImage = "/images/hero.jpg";
+    let ogDesc = "Discover stylish, durable, and elegant bags designed for work, travel, and everyday sophistication.";
+    
+    // Update OG Tags Helper
+    const setMeta = (property: string, content: string) => {
+      let element = document.querySelector(`meta[property="${property}"]`);
+      if (element) element.setAttribute("content", content);
+      else {
+        element = document.createElement("meta");
+        element.setAttribute("property", property);
+        element.setAttribute("content", content);
+        document.head.appendChild(element);
+      }
+    };
+
+    if (route.path === "/shop") {
+      title = "Shop All | G-Smile Signature";
+    } else if (route.path.startsWith("/product/")) {
       const p = products.find((p: any) => p.id === route.path.split("/product/")[1]);
-      if (p) title = `${p.name} | G-Smile Signature`;
-    }
-    else if (route.path === "/cart") title = "Shopping Cart | G-Smile Signature";
+      if (p) {
+        title = `${p.name} | G-Smile Signature`;
+        ogImage = p.image;
+        ogDesc = `${p.name} - Premium full-grain leather bag by G-Smile Signature. Price: ₦${p.price.toLocaleString()}.`;
+      }
+    } else if (route.path === "/cart") title = "Shopping Cart | G-Smile Signature";
     else if (route.path === "/checkout") title = "Checkout | G-Smile Signature";
     else if (route.path === "/about") title = "Our Story | G-Smile Signature";
     else if (route.path === "/contact") title = "Contact Us | G-Smile Signature";
     else if (route.path === "/faq") title = "Help & FAQ | G-Smile Signature";
     else if (route.path === "/wishlist") title = "My Wishlist | G-Smile Signature";
     else if (route.path === "/dashboard") title = "My Account | G-Smile Signature";
+    else if (route.path === "/privacy-policy") title = "Privacy Policy | G-Smile Signature";
+    else if (route.path === "/terms-of-service") title = "Terms of Service | G-Smile Signature";
+    else if (route.path === "/returns") title = "Return & Refund Policy | G-Smile Signature";
     
     document.title = title;
+    setMeta("og:title", title);
+    setMeta("og:description", ogDesc);
+    setMeta("og:image", `${window.location.origin}${ogImage.startsWith("http") ? "" : ogImage}`);
+    setMeta("twitter:title", title);
+    setMeta("twitter:description", ogDesc);
+    setMeta("twitter:image", `${window.location.origin}${ogImage.startsWith("http") ? "" : ogImage}`);
+    
+    // GA4 Page View Tracking
+    if ((window as any).gtag) {
+      (window as any).gtag("event", "page_view", {
+        page_title: title,
+        page_location: window.location.href,
+        page_path: route.path,
+      });
+    }
   }, [route.path, route.query, products]);
 
   let page;
@@ -76,6 +115,7 @@ function Shell() {
   else if (path === "/register") page = <Auth initial="register" />;
   else if (path === "/forgot") page = <Auth initial="forgot" />;
   else if (path === "/admin-login") page = <AdminLogin />;
+  else if (path === "/privacy-policy" || path === "/terms-of-service" || path === "/returns") page = <Legal />;
   else if (isAdmin) page = <Admin />;
   else page = <Home onQuickView={setQuickView} />;
 
@@ -96,6 +136,7 @@ function Shell() {
       <QuickView product={quickView} onClose={() => setQuickView(null)} />
       {!isAuth && <WhatsAppButton />}
       <Toasts />
+      <CookieConsent />
     </div>
   );
 }
