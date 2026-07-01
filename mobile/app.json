@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "G-Smile Signature",
+    "slug": "gsmile-signature",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#111111"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gsmilesignature.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to upload payment proof screenshots.",
+        "NSPhotoLibraryUsageDescription": "Used to select payment proof and profile images."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#111111"
+      },
+      "package": "com.gsmilesignature.app",
+      "permissions": ["NOTIFICATIONS", "CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#D4A24A"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
